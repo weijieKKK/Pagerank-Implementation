@@ -26,11 +26,11 @@ public class PageRank {
     static HashMap<String,Integer> airportIndices = new HashMap<String,Integer>();  // airport code to index
     static EdgeList[] G;             // G[i] is a list of pairs (j,k) meaning
                                      // "there are k routes from airport i to airport j"
-    //....                             // other info??
+
     
     static HashMap<String,String> codeToName = new HashMap<String,String>();
     
-    //dado un indice de un aeropuerto devuelve el peso de salida out(j)
+    //given an airport index it returns its out weight
     static HashMap<Integer,Integer> pesos_salida = new HashMap<Integer,Integer>(); 
     
     public static void readAirports() {
@@ -44,21 +44,16 @@ public class PageRank {
          String strLine;
          int index = 0;
          ArrayList<String> codeTemp = new ArrayList<String>();
-         while ((strLine = br.readLine()) != null) { 
-        	   //System.out.println(strLine);
+         while ((strLine = br.readLine()) != null) { //parse every airport
                String[] aLine = strLine.split(",");
                String airportCode = aLine[4];
-               //airportCode = airportCode.substring(1, 3);
                
                String airportName = aLine[1]+" ("+aLine[3]+")";
                if (airportCode.length() == 5) {
-            	   //System.out.println(airportCode.substring(1, 4));
-            	   
                    codeTemp.add(airportCode.substring(1, 4));
-                  // System.out.println("codigo " + airportCode + " " +airportCode.length());
                    index++;
                    if(!codeToName.containsKey(airportCode.substring(1, 4))){
-                	   codeToName.put(airportCode.substring(1, 4), airportName);
+                	   codeToName.put(airportCode.substring(1, 4), airportName); //hash every code to its full name
                    }
                   
                 }
@@ -67,14 +62,12 @@ public class PageRank {
          G = new EdgeList[index];
          PageRank p = new PageRank();
          for(int i = 0; i < codeTemp.size(); ++i){
-        	 airportIndices.put(codeTemp.get(i), i);
+        	 airportIndices.put(codeTemp.get(i), i); //initialize a node in G for every code we have read
         	 G[i] = p.new EdgeList();
         	 G[i].list = new ArrayList<Edge>();
         	 G[i].weight = 0;
 
          }
-
-         // TO DO: DUMP STUFF TO airportCodes, airportNames, airportIndices
          
          System.out.println("... "+index+" airports read");
 
@@ -100,19 +93,18 @@ public class PageRank {
 	         PageRank p = new PageRank();
 	         String strLine;
 	         int index = 0;
-	         while ((strLine = br.readLine()) != null) {           
+	         while ((strLine = br.readLine()) != null) {   //parse every route in the file        
 	               String[] aLine = strLine.split(",");
 	               String airportOrigen = aLine[2];
 	               String airportDestino = aLine[4];
 	               if (airportIndices.containsKey(airportDestino) && airportIndices.containsKey(airportOrigen)) {
-	            	   Integer origen_code = airportIndices.get(airportOrigen);
+	            	   Integer origen_code = airportIndices.get(airportOrigen);	//hash the code to an index between 1..G.size
 	            	   Integer destino_code = airportIndices.get(airportDestino);
-	            	  // System.out.println("Entro");
 	            	   Edge e = p.new Edge();
 	            	   e.weight = 1;
 	            	   e.dest = origen_code;
 	            	   ++index;
-	            	   G[destino_code].list.add(e);
+	            	   G[destino_code].list.add(e); //add an edge to the graph for every route we read between origin and 								//destination airport
 	            	   
 	            	   if(pesos_salida.containsKey(origen_code)){
 	            		   Integer aux = pesos_salida.get(origen_code);
@@ -138,24 +130,25 @@ public class PageRank {
    }
 
    public static Double[] computePageRanks() {
+	//computes pagerank with lambda = 0.85 and it stops when difference between new computed pageranks and old pageranks is < 	  //10^-14
       
 	   int n = G.length;
 	   double L = 0.85;
 	   Double[] P = new Double[n];
-	   Arrays.fill(P, 1.0/n);
+	   Arrays.fill(P, 1.0/n);      
 	   Double [] Q = new Double[n];
 	   Arrays.fill(Q,0.0);
-	   int j = 0;
 	   boolean continua = true;
+
 	   while(continua){
-		   ++j;
 		   Arrays.fill(Q,0.0);
 
 		   Double pagerank_acumulado_nodos_sin_aristas_salida = 0.0;
 		   Double sum = 0.0;
 		   
 		   for(int i = 0; i < n; ++i){
-			   if(!pesos_salida.containsKey(i)){
+			   if(!pesos_salida.containsKey(i)){					//if doesnt have outgoing edges,
+												//take its pagerank and divide it 													//among the rest of nodes
 				   pagerank_acumulado_nodos_sin_aristas_salida += P[i] / n;
 			   }
 		   }
@@ -163,10 +156,9 @@ public class PageRank {
 			   Q[i] += pagerank_acumulado_nodos_sin_aristas_salida;  
 		   }
 		   
-		   //System.out.println("pr " + pagerank_acumulado_nodos_sin_aristas_salida);
 		   for(int i = 0; i < n; ++i){ //for each node in G
 			   sum = 0.0;
-			   if(pesos_salida.containsKey(i)){ //calculem pagerank normalment si te alguna aresta de sortida
+			   if(pesos_salida.containsKey(i)){ //compute pagerank normally if it does have any outgoing edge
 				   for(int k = 0; k < G[i].list.size(); ++k){
 					   sum += P[G[i].list.get(k).dest] / pesos_salida.get(G[i].list.get(k).dest);
 				   }
@@ -184,8 +176,6 @@ public class PageRank {
 		   for(int y = 0; y < P.length; ++y){
 			   aux += P[y];
 		   }
-		   //System.out.println("suma " + aux);
-		   //System.out.println("iters" + j);
 		   
 	   }
 	   
@@ -195,6 +185,8 @@ public class PageRank {
    }
    
    private static boolean resta(Double[] a, Double[] b, double factor){
+  //input: two vectors of doubles
+  //output: true if exists any index i such that a[i]-b[i] or b[i]-a[i] is greater than factor
 	   double maxdif = b[0]-a[0];
 	   for(int k = 0; k < a.length; ++k){
 		   if (b[k] > a[k]){
@@ -212,7 +204,6 @@ public class PageRank {
 			 
 	   }
 	   if(maxdif > factor) return true;
-	   //System.out.println("maxdif " + maxdif + " factor " + factor);
 	   return false;
    }
    
@@ -243,8 +234,6 @@ public class PageRank {
    
    public class CustomComparator implements Comparator<Pair> {
 	    public int compare(Pair p1, Pair p2) {
-	    	//System.out.println("Pair 1 first: " + p1.first + " second: "+p1.second);
-	    	//System.out.println("Pair 2 first: " + p2.first + " second: "+p2.second);
 	        return p1.second < p2.second ? 1 : -1;
 	    }
 	}
